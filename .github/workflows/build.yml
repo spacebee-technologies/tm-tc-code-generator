@@ -66,6 +66,6 @@ jobs:
       - name: Publish to PyPI
         run: |
           poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-          poetry publish --no-build
+          poetry publish
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
