@@ -35,3 +35,37 @@ jobs:
         with:
           name: tm-tc-code-generator-dist
           path: dist/
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # Set up Python
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'  # TODO: Take version from pyproject.toml?
+
+      # Install Poetry
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      # Download artifacts
+      - name: Download artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: tm-tc-code-generator-dist
+          path: dist/
+
+      # Publish to PyPI
+      - name: Publish to PyPI
+        run: |
+          poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+          poetry publish --no-build
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
