@@ -77,6 +77,17 @@ jobs:
           name: tm-tc-code-generator-dist
           path: dist/
 
+      # Extract version from Git tag (only for releases)
+      - name: Extract and set version from Git tag
+        if: github.event_name == 'release' && github.event.action == 'published'
+        run: |
+          # Extract version from tag (e.g., v0.1.1 -> 0.1.1)
+          VERSION=$(echo "${{ github.ref }}" | sed 's/refs\/tags\/v//')
+          poetry version $VERSION
+          echo "Set package version to $VERSION"
+        env:
+          GITHUB_REF: ${{ github.ref }}
+
       # Publish to PyPI
       - name: Publish to PyPI
         run: |
