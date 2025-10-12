@@ -1,6 +1,6 @@
 [project]
 name = "tm-tc-code-generator"
-version = "0.1.0"
+version = "0.0.0"  # Placeholder, overridden by Git tag in CI
 description = ""
 authors = [
     { name = "Lautaro Mendieta", email = "lemendieta96@gmail.com" },
