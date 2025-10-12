@@ -13,10 +13,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      # Extract Python version from pyproject.toml
+      - name: Extract Python version
+        id: python-version
+        run: |
+          PYTHON_VERSION=$(grep -oP 'python = "\^?\K[0-9]+\.[0-9]+' pyproject.toml)
+          echo "Extracted Python version: $PYTHON_VERSION"
+          echo "python-version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
       # Set up Python
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.12'  # TODO: Take version from pyproject.toml?
+          python-version: ${{ steps.python-version.outputs.python-version }}
 
       # Install Poetry
       - name: Install Poetry
@@ -59,10 +68,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      # Extract Python version from pyproject.toml
+      - name: Extract Python version
+        id: python-version
+        run: |
+          PYTHON_VERSION=$(grep -oP 'python = "\^?\K[0-9]+\.[0-9]+' pyproject.toml)
+          echo "Extracted Python version: $PYTHON_VERSION"
+          echo "python-version=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
       # Set up Python
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.12'  # TODO: Take version from pyproject.toml?
+          python-version: ${{ steps.python-version.outputs.python-version }}
 
       # Install Poetry
       - name: Install Poetry
