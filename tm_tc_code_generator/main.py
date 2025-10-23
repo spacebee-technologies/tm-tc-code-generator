@@ -222,6 +222,13 @@ def main(input_file: pathlib.Path, output_dir: pathlib.Path):
     telecommand_python_template = env_python.get_template("telecommand_python.jinja")
 
     telecommands = parsed_json['telecommands']
+
+    package_initializer_template = env_python.get_template('package_initializer.jinja')
+    commands_snake = [camel_to_snake(command['name']) for command in telecommands]
+    output = package_initializer_template.render(commands=commands_snake)
+    with open(py_tc_output_dir / f'__init__.py', 'w') as file_handler:
+        print(output, file=file_handler)
+
     for telecommand in telecommands:
         generate_telecommand_class(telecommand_python_template, telecommand, py_tc_output_dir)
         generate_telecommand_base_header(telecommand_base_header_template, telecommand, c_tc_output_dir)
