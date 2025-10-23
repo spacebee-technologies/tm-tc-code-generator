@@ -193,10 +193,19 @@ def generate_package_initializer(env, telecommands, output_dir):
         print(output, file=file_handler)
 
 
+def generate_pyproject(env, app_name, output_dir):
+    pyproject_template = env.get_template('pyproject.toml.jinja')
+    app_name_snake = app_name.replace('-', '_')
+    output = pyproject_template.render(app_name=app_name, app_name_snake=app_name_snake)
+    with open(output_dir / f'pyproject.toml', 'w') as file_handler:
+        print(output, file=file_handler)
+
+
 @click.command()
 @click.argument('input_file', type=click.Path(exists=True, path_type=pathlib.Path))
 @click.argument('output_dir', type=click.Path(exists=False, file_okay=False, path_type=pathlib.Path))
-def main(input_file: pathlib.Path, output_dir: pathlib.Path):
+@click.argument('app_name')
+def main(input_file: pathlib.Path, output_dir: pathlib.Path, app_name: str):
     # Parse JSON file
     with open(input_file) as file_handler:
         file_contents = file_handler.read()
@@ -232,6 +241,7 @@ def main(input_file: pathlib.Path, output_dir: pathlib.Path):
     telecommands = parsed_json['telecommands']
 
     generate_package_initializer(env_python, telecommands, py_tc_output_dir)
+    generate_pyproject(env_python, app_name, py_tc_output_dir)
 
     for telecommand in telecommands:
         generate_telecommand_class(telecommand_python_template, telecommand, py_tc_output_dir)
