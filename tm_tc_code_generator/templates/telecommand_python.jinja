@@ -53,6 +53,8 @@ class {{ class_name }}(TelecommandInterface):
         self.body += int(arg_{{ loop.index0 }}).to_bytes(1, 'little')
         {%- elif arg['type'] == 'uint16_t' %}
         self.body += int(arg_{{ loop.index0 }}).to_bytes(2, 'little')
+        {%- elif arg['type'] == 'uint32_t' %}
+        self.body += int(arg_{{ loop.index0 }}).to_bytes(4, 'little')
         {%- elif arg['type'] == 'enum' %}
         arg_{{ loop.index0 }} = int(arg_{{ loop.index0 }})
         if arg_{{ loop.index0 }} not in self.enum_map_{{ arg['name'] }}:
