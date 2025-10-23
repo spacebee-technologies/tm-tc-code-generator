@@ -185,17 +185,35 @@ def generate_telecommand_class(template, telecommand, output_dir):
         print(class_code, file=file_handler)
 
 
+def generate_package_initializer(env, telecommands, output_dir):
+    package_initializer_template = env.get_template('package_initializer.jinja')
+    commands_snake = [camel_to_snake(command['name']) for command in telecommands]
+    output = package_initializer_template.render(commands=commands_snake)
+    with open(output_dir / f'__init__.py', 'w') as file_handler:
+        print(output, file=file_handler)
+
+
+def generate_pyproject(env, app_name, output_dir):
+    pyproject_template = env.get_template('pyproject.toml.jinja')
+    app_name_snake = app_name.replace('-', '_')
+    output = pyproject_template.render(app_name=app_name, app_name_snake=app_name_snake)
+    with open(output_dir / f'pyproject.toml', 'w') as file_handler:
+        print(output, file=file_handler)
+
+
 @click.command()
 @click.argument('input_file', type=click.Path(exists=True, path_type=pathlib.Path))
 @click.argument('output_dir', type=click.Path(exists=False, file_okay=False, path_type=pathlib.Path))
-def main(input_file: pathlib.Path, output_dir: pathlib.Path):
+@click.argument('app_name')
+def main(input_file: pathlib.Path, output_dir: pathlib.Path, app_name: str):
     # Parse JSON file
     with open(input_file) as file_handler:
         file_contents = file_handler.read()
     parsed_json = json.loads(file_contents)
 
     py_tm_output_dir = output_dir / 'py' / 'tm'
-    py_tc_output_dir = output_dir / 'py' / 'tc'
+    py_tc_base_output_dir = output_dir / 'py' / 'tc'
+    py_tc_output_dir = output_dir / 'py' / 'tc' / app_name.replace('-', '_')
     c_tm_output_dir = output_dir / 'c' / 'tm'
     c_tc_output_dir = output_dir / 'c' / 'tc'
 
@@ -222,6 +240,10 @@ def main(input_file: pathlib.Path, output_dir: pathlib.Path):
     telecommand_python_template = env_python.get_template("telecommand_python.jinja")
 
     telecommands = parsed_json['telecommands']
+
+    generate_package_initializer(env_python, telecommands, py_tc_output_dir)
+    generate_pyproject(env_python, app_name, py_tc_base_output_dir)
+
     for telecommand in telecommands:
         generate_telecommand_class(telecommand_python_template, telecommand, py_tc_output_dir)
         generate_telecommand_base_header(telecommand_base_header_template, telecommand, c_tc_output_dir)

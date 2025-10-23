@@ -1,6 +1,9 @@
 # telecommand_template.jinja
 
-from telecommand_interface import TelecommandInterface, struct
+import struct
+
+from spacebee_commander.telecommand_interface import TelecommandInterface
+
 {% if return_type %}
     {%- if return_name == 'timestamp' -%}
 from datetime import timedelta
@@ -40,7 +43,7 @@ class {{ class_name }}(TelecommandInterface):
             raise ValueError("Expected {{ arguments|length }} arguments, but got {}".format(len(args)))
 
         self.body = b""
-        
+
         {% for arg in arguments %}
         arg_{{ loop.index0 }} = args[{{ loop.index0 }}]
         {%- if arg['type'] == 'float' %}
