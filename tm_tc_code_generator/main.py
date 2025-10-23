@@ -212,7 +212,8 @@ def main(input_file: pathlib.Path, output_dir: pathlib.Path, app_name: str):
     parsed_json = json.loads(file_contents)
 
     py_tm_output_dir = output_dir / 'py' / 'tm'
-    py_tc_output_dir = output_dir / 'py' / 'tc'
+    py_tc_base_output_dir = output_dir / 'py' / 'tc'
+    py_tc_output_dir = output_dir / 'py' / 'tc' / app_name.replace('-', '_')
     c_tm_output_dir = output_dir / 'c' / 'tm'
     c_tc_output_dir = output_dir / 'c' / 'tc'
 
@@ -241,7 +242,7 @@ def main(input_file: pathlib.Path, output_dir: pathlib.Path, app_name: str):
     telecommands = parsed_json['telecommands']
 
     generate_package_initializer(env_python, telecommands, py_tc_output_dir)
-    generate_pyproject(env_python, app_name, py_tc_output_dir)
+    generate_pyproject(env_python, app_name, py_tc_base_output_dir)
 
     for telecommand in telecommands:
         generate_telecommand_class(telecommand_python_template, telecommand, py_tc_output_dir)
