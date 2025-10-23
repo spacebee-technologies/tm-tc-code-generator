@@ -185,6 +185,14 @@ def generate_telecommand_class(template, telecommand, output_dir):
         print(class_code, file=file_handler)
 
 
+def generate_package_initializer(env, telecommands, output_dir):
+    package_initializer_template = env.get_template('package_initializer.jinja')
+    commands_snake = [camel_to_snake(command['name']) for command in telecommands]
+    output = package_initializer_template.render(commands=commands_snake)
+    with open(output_dir / f'__init__.py', 'w') as file_handler:
+        print(output, file=file_handler)
+
+
 @click.command()
 @click.argument('input_file', type=click.Path(exists=True, path_type=pathlib.Path))
 @click.argument('output_dir', type=click.Path(exists=False, file_okay=False, path_type=pathlib.Path))
@@ -223,11 +231,7 @@ def main(input_file: pathlib.Path, output_dir: pathlib.Path):
 
     telecommands = parsed_json['telecommands']
 
-    package_initializer_template = env_python.get_template('package_initializer.jinja')
-    commands_snake = [camel_to_snake(command['name']) for command in telecommands]
-    output = package_initializer_template.render(commands=commands_snake)
-    with open(py_tc_output_dir / f'__init__.py', 'w') as file_handler:
-        print(output, file=file_handler)
+    generate_package_initializer(env_python, telecommands, py_tc_output_dir)
 
     for telecommand in telecommands:
         generate_telecommand_class(telecommand_python_template, telecommand, py_tc_output_dir)
