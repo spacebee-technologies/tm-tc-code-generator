@@ -49,6 +49,8 @@ class {{ class_name }}(TelecommandInterface):
         {%- if arg['type'] == 'float' %}
         arg_{{ loop.index0 }} = float(arg_{{ loop.index0 }})
         self.body += struct.pack('f', arg_{{ loop.index0 }})
+        {%- elif arg['type'] == 'uint8_t' %}
+        self.body += int(arg_{{ loop.index0 }}).to_bytes(1, 'little')
         {%- elif arg['type'] == 'uint16_t' %}
         self.body += int(arg_{{ loop.index0 }}).to_bytes(2, 'little')
         {%- elif arg['type'] == 'enum' %}
