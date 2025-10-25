@@ -40,7 +40,7 @@ class {{ class_name }}(TelecommandInterface):
             raise ValueError("Expected {{ arguments|length }} arguments, but got {}".format(len(args)))
 
         self.body = b""
-        
+
         {% for arg in arguments %}
         arg_{{ loop.index0 }} = args[{{ loop.index0 }}]
         {%- if arg['type'] == 'float' %}
@@ -64,6 +64,7 @@ class {{ class_name }}(TelecommandInterface):
 
         self.body_length = len(self.body)
         {% else %}
+        # No arguments; nothing to process
         self.body = b""
         self.body_length = 0
         {% endif %}
