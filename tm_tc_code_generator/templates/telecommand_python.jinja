@@ -46,20 +46,25 @@ class {{ class_name }}(TelecommandInterface):
         {%- if arg['type'] == 'float' %}
         arg_{{ loop.index0 }} = float(arg_{{ loop.index0 }})
         self.body += struct.pack('f', arg_{{ loop.index0 }})
+        {%- elif arg['type'] == 'uint8_t' %}
+        self.body += int(arg_{{ loop.index0 }}).to_bytes(1, 'little')
         {%- elif arg['type'] == 'uint16_t' %}
         self.body += int(arg_{{ loop.index0 }}).to_bytes(2, 'little')
+        {%- elif arg['type'] == 'uint32_t' %}
+        self.body += int(arg_{{ loop.index0 }}).to_bytes(4, 'little')
         {%- elif arg['type'] == 'enum' %}
         arg_{{ loop.index0 }} = int(arg_{{ loop.index0 }})
         if arg_{{ loop.index0 }} not in self.enum_map_{{ arg['name'] }}:
             raise ValueError(f"Invalid input for {{ arg['name'] }}")
         self.body += arg_{{ loop.index0 }}.to_bytes(max((arg_{{ loop.index0 }}.bit_length() + 7) // 8, 1), 'little')
+        {%- else %}
+        raise TypeError(f"Unsupported argument type '{{ arg['type'] }}' for argument '{{ arg['name'] }}'")
         {%- endif %}
         {% endfor %}
 
         self.body_length = len(self.body)
         {% else %}
-        # No arguments; nothing to process
-        self.body = bytes()
+        self.body = b""
         self.body_length = 0
         {% endif %}
 

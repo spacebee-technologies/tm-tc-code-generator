@@ -163,26 +163,56 @@ def generate_telemetry_source(template, telemetry, output_dir):
         print(output, file=file_handler)
 
 
+def validate_telecommand_arguments(telecommand):
+    supported_types = {"float", "uint8_t", "uint16_t", "uint32_t", "enum"}
+    arguments = telecommand.get("arguments", [])
+
+    unsupported = []
+    for arg in arguments:
+        arg_type = arg.get("type")
+        if arg_type not in supported_types:
+            unsupported.append((arg.get("name"), arg_type))
+
+    if unsupported:
+        error_details = "\n".join(
+            f"  - Argument '{name}': type '{arg_type}'"
+            for name, arg_type in unsupported
+        )
+        raise TypeError(
+            f"Telecommand '{telecommand['name']}' contains unsupported argument types:\n"
+            f"{error_details}\n"
+            f"Supported types are: {', '.join(sorted(supported_types))}"
+        )
+
+
 def generate_telecommand_class(template, telecommand, output_dir):
-    class_name = camel_to_snake(telecommand['name'])
+    try:
+        validate_telecommand_arguments(telecommand)
 
-    # Prepare the data for the template
-    template_data = {
-        'class_name': class_name,
-        'telecommand_name': camel_to_snake(telecommand['name']),
-        'operation_id': telecommand['id'],
-        'num_inputs': len(telecommand.get('arguments', [])),
-        'arguments': telecommand.get('arguments', []),
-        'return_type': telecommand.get('return', {}).get('type', None),
-        'return_name': telecommand.get('return', {}).get('name', None)
-    }
+        class_name = camel_to_snake(telecommand["name"])
 
-    # Render the template with data
-    class_code = template.render(template_data, enumerate=enumerate)
+        # Prepare the data for the template
+        template_data = {
+            "class_name": class_name,
+            "telecommand_name": camel_to_snake(telecommand["name"]),
+            "operation_id": telecommand["id"],
+            "num_inputs": len(telecommand.get("arguments", [])),
+            "arguments": telecommand.get("arguments", []),
+            "return_type": telecommand.get("return", {}).get("type", None),
+            "return_name": telecommand.get("return", {}).get("name", None),
+        }
 
-    # Write the generated class code to a Python file
-    with open(output_dir / f'{class_name}.py', 'w') as file_handler:
-        print(class_code, file=file_handler)
+        # Render the template with data
+        class_code = template.render(template_data, enumerate=enumerate)
+
+        # Write the generated class code to a Python file
+        with open(output_dir / f"{class_name}.py", "w") as file_handler:
+            print(class_code, file=file_handler)
+
+    except Exception as e:
+        print(
+            f"Error generating telecommand '{telecommand.get('name', 'UNKNOWN')}': {str(e)}"
+        )
 
 
 @click.command()
