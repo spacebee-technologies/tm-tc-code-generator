@@ -60,13 +60,15 @@ class {{ class_name }}(TelecommandInterface):
         if arg_{{ loop.index0 }} not in self.enum_map_{{ arg['name'] }}:
             raise ValueError(f"Invalid input for {{ arg['name'] }}")
         self.body += arg_{{ loop.index0 }}.to_bytes(max((arg_{{ loop.index0 }}.bit_length() + 7) // 8, 1), 'little')
+        {%- else %}
+        raise TypeError(f"Unsupported argument type '{{ arg['type'] }}' for argument '{{ arg['name'] }}'")
         {%- endif %}
         {% endfor %}
 
         self.body_length = len(self.body)
         {% else %}
         # No arguments; nothing to process
-        self.body = bytes()
+        self.body = b""
         self.body_length = 0
         {% endif %}
 
