@@ -78,6 +78,7 @@ class {{ class_name }}(TelecommandInterface):
         response_dict = {}
     {%- if return_type == 'uint32_t' %}
         response_int = int.from_bytes(response, 'little')
+        response_dict['int_value'] = hex(response_int)
     {%- if return_name == 'timestamp' %}
         timestamp = timedelta(milliseconds=response_int)
         response_dict['Date'] = str(timestamp)
