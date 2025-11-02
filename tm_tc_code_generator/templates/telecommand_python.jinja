@@ -83,14 +83,14 @@ class {{ command_name }}(TelecommandInterface):
         self.body_length = 0
 
     @classmethod
-    def getInputType(cls){% if has_input_args %} -> type[{{ command_name }}Args]{% else %} -> None{% endif %}:
+    def get_input_type(cls){% if has_input_args %} -> type[{{ command_name }}Args]{% else %} -> None{% endif %}:
         {%- if has_input_args %}
         return {{ command_name }}Args
         {%- else %}
         return None
         {%- endif %}
 
-    def loadInputArguments(self, args{% if has_input_args %}: {{ command_name }}Args{% else %}: None{% endif %}) -> None:
+    def load_input_arguments(self, args{% if has_input_args %}: {{ command_name }}Args{% else %}: None{% endif %}) -> None:
         {%- if has_input_args %}
         self.body = {{ command_name }}Args.pack(args)
         self.body_length = {{ command_name }}Args.size()
@@ -99,7 +99,7 @@ class {{ command_name }}(TelecommandInterface):
         self.body_length = 0
         {%- endif %}
 
-    def parseOutputArguments(self, response: bytes){% if has_output_args %} -> {{ command_name }}Response{% else %} -> None{% endif %}:
+    def parse_output_arguments(self, response: bytes){% if has_output_args %} -> {{ command_name }}Response{% else %} -> None{% endif %}:
         {%- if has_output_args %}
         return {{ command_name }}Response.unpack(response)
         {%- else %}
