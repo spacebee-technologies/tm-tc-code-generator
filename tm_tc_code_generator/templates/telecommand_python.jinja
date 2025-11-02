@@ -8,7 +8,6 @@ import enum
 
 from spacebee_commander.telecommand_interface import TelecommandInterface
 {%- if enums %}
-# === Enums ===
 {%- for enum in enums %}
 
 class {{ enum.name }}(enum.IntEnum):
@@ -22,7 +21,6 @@ class {{ enum.name }}(enum.IntEnum):
 
 @dataclasses.dataclass
 class {{ command_name }}Args:
-    # === Arguments ===
 {%- for arg in args %}
     {{ arg.name }}: {{ arg.type }}
 {%- endfor %}
@@ -44,7 +42,6 @@ class {{ command_name }}Args:
 
 @dataclasses.dataclass
 class {{ command_name }}Response:
-    # === Response ===
 {%- for field in response_fields %}
     {{ field.name }}: {{ field.type }}
 {%- endfor %}
