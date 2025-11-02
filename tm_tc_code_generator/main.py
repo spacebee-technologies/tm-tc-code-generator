@@ -163,62 +163,116 @@ def generate_telemetry_source(template, telemetry, output_dir):
         print(output, file=file_handler)
 
 
-def validate_telecommand_arguments(telecommand):
-    supported_types = {"float", "uint8_t", "uint16_t", "uint32_t", "enum"}
-    arguments = telecommand.get("arguments", [])
-
-    unsupported = []
-    for arg in arguments:
-        arg_type = arg.get("type")
-        if arg_type not in supported_types:
-            unsupported.append((arg.get("name"), arg_type))
-
-    if unsupported:
-        error_details = "\n".join(
-            f"  - Argument '{name}': type '{arg_type}'"
-            for name, arg_type in unsupported
-        )
-        raise TypeError(
-            f"Telecommand '{telecommand['name']}' contains unsupported argument types:\n"
-            f"{error_details}\n"
-            f"Supported types are: {', '.join(sorted(supported_types))}"
-        )
-
-
 def generate_telecommand_class(template, telecommand, output_dir):
-    try:
-        validate_telecommand_arguments(telecommand)
+    command_spec = telecommand
+    name = command_spec["name"]
+    snake_name = camel_to_snake(name)
+    operation_id = int(command_spec["id"])
 
-        class_name = camel_to_snake(telecommand["name"])
+    type_map = {
+        "uint8_t":  ("int", "B"),
+        "uint16_t": ("int", "H"),
+        "uint32_t": ("int", "I"),
+        "int8_t":   ("int", "b"),
+        "int16_t":  ("int", "h"),
+        "int32_t":  ("int", "i"),
+        "float":    ("float", "f"),
+    }
 
-        # Prepare the data for the template
-        template_data = {
-            "class_name": class_name,
-            "telecommand_name": camel_to_snake(telecommand["name"]),
-            "operation_id": telecommand["id"],
-            "num_inputs": len(telecommand.get("arguments", [])),
-            "arguments": telecommand.get("arguments", []),
-            "return_type": telecommand.get("return", {}).get("type", None),
-            "return_name": telecommand.get("return", {}).get("name", None),
-        }
+    # Input arguments
+    args = []
+    struct_parts = []
 
-        # Render the template with data
-        class_code = template.render(template_data, enumerate=enumerate)
+    for arg in command_spec.get("arguments", []):
+        arg_type = arg["type"]
+        py_type = "int"
+        struct_code = ""
 
-        # Write the generated class code to a Python file
-        with open(output_dir / f"{class_name}.py", "w") as file_handler:
-            print(class_code, file=file_handler)
+        # Enum type
+        if arg_type == "enum":
+            py_type = upper_first_letter(arg["enumName"])
+            struct_code = "B"
 
-    except Exception as e:
-        print(
-            f"Error generating telecommand '{telecommand.get('name', 'UNKNOWN')}': {str(e)}"
-        )
+        # String or bytes (fixed-length)
+        elif arg_type == "string":
+            py_type = "str"
+            length = int(arg.get("stringLength", "1"))
+            struct_code = f"{length}s"
+
+        # Normal numeric types
+        elif arg_type in type_map:
+            py_type, struct_code = type_map[arg_type]
+
+        else:
+            raise ValueError(f"Unsupported argument type: {arg_type}")
+
+        args.append({"name": camel_to_snake(arg["name"]), "type": py_type})
+        struct_parts.append(struct_code)
+
+    has_input_args = len(args) > 0
+    struct_format = "<" + " ".join(struct_parts) if has_input_args else ""
+
+    # Output arguments
+    has_output_args = "return" in command_spec and command_spec["return"] is not None
+    response_fields = []
+    response_struct_format = ""
+
+    if has_output_args:
+        ret = command_spec["return"]
+        ret_type = ret["type"]
+        struct_code = ""
+
+        if ret_type == "string":
+            py_type = "str"
+            length = int(ret.get("stringLength", "1"))
+            struct_code = f"{length}s"
+        elif ret_type in type_map:
+            py_type, struct_code = type_map[ret_type]
+        else:
+            raise ValueError(f"Unsupported return type: {ret_type}")
+
+        response_fields = [{"name": camel_to_snake(ret["name"]), "type": py_type}]
+        response_struct_format = "<" + struct_code
+
+    # Handle enums
+    enums = []
+    if any(a.get("type") == "enum" for a in command_spec.get("arguments", [])):
+        enums = [
+            {
+                "name": upper_first_letter(arg["enumName"]),
+                "entries": {v: i for i, v in enumerate(arg["values"])},
+            }
+            for arg in command_spec["arguments"]
+            if arg["type"] == "enum"
+        ]
+
+    data = {
+        "command_name": name[0].upper() + name[1:],
+        "command_name_snake": snake_name,
+        "operation_id": operation_id,
+        "has_enum": bool(enums),
+        "enums": enums,
+        "has_input_args": has_input_args,
+        "args": args,
+        "struct_format": struct_format,
+        "has_output_args": has_output_args,
+        "response_fields": response_fields,
+        "response_struct_format": response_struct_format,
+    }
+
+    # Render the template with data
+    class_code = template.render(data)
+
+    # Write the generated class code to a Python file
+    with open(output_dir / f"{snake_name}.py", "w") as file_handler:
+        print(class_code, file=file_handler)
 
 
 def generate_package_initializer(env, telecommands, output_dir):
     package_initializer_template = env.get_template('package_initializer.jinja')
-    commands_snake = [camel_to_snake(command['name']) for command in telecommands]
-    output = package_initializer_template.render(commands=commands_snake)
+    commands = [{'file': camel_to_snake(command['name']), 'class': upper_first_letter(command['name'])}
+                for command in telecommands]
+    output = package_initializer_template.render(commands=commands)
     with open(output_dir / f'__init__.py', 'w') as file_handler:
         print(output, file=file_handler)
 
