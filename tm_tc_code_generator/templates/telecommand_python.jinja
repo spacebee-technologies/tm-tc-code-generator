@@ -1,93 +1,104 @@
-# telecommand_template.jinja
+from __future__ import annotations
 
 import struct
+import dataclasses
+{%- if has_enum %}
+import enum
+{%- endif %}
 
 from spacebee_commander.telecommand_interface import TelecommandInterface
+{%- if enums %}
+{%- for enum in enums %}
 
-{% if return_type %}
-    {%- if return_name == 'timestamp' -%}
-from datetime import timedelta
-    {%- endif -%}
-{% endif %}
+class {{ enum.name }}(enum.IntEnum):
+{%- for key, value in enum.entries.items() %}
+    {{ key }} = {{ value }}
+{%- endfor %}
+{%- endfor %}
+{%- endif %}
 
+{%- if has_input_args %}
 
-class {{ class_name }}(TelecommandInterface):
-    {% if arguments -%}
-        {% for argument in arguments %}
-            {%- if argument['type'] == 'enum' %}
-    enum_map_{{ argument['name'] }} = {
-        {%- for value in argument['values'] -%}
-        {{ loop.index0 }}: "{{ value }}"{% if not loop.last %},{% endif %}
-        {%- endfor -%}
-    }
-            {%- endif -%}
-        {%- endfor -%}
-    {% endif %}
+@dataclasses.dataclass
+class {{ command_name }}Args:
+{%- for arg in args %}
+    {{ arg.name }}: {{ arg.type }}
+{%- endfor %}
+
+    _STRUCT_FORMAT = "{{ struct_format }}"
+
+    @classmethod
+    def pack(cls, args: {{ command_name }}Args) -> bytes:
+        """Pack a {{ command_name }}Args dataclass into raw bytes."""
+        return struct.pack(cls._STRUCT_FORMAT, *dataclasses.astuple(args))
+
+    @classmethod
+    def size(cls) -> int:
+        """Return the size in bytes of the packet."""
+        return struct.calcsize(cls._STRUCT_FORMAT)
+{%- endif %}
+
+{%- if has_output_args %}
+
+@dataclasses.dataclass
+class {{ command_name }}Response:
+{%- for field in response_fields %}
+    {{ field.name }}: {{ field.type }}
+{%- endfor %}
+
+    _STRUCT_FORMAT = "{{ response_struct_format }}"
+
+    @classmethod
+    def unpack(cls, raw: bytes) -> {{ command_name }}Response:
+        """Unpack raw bytes into a {{ command_name }}Response dataclass."""
+{%- set string_fields = response_fields | selectattr("type", "equalto", "str") | list %}
+{%- if string_fields|length == 1 and response_fields|length == 1 %}
+        (raw_{{ response_fields[0].name }},) = struct.unpack(cls._STRUCT_FORMAT, raw)
+        {{ response_fields[0].name }} = raw_{{ response_fields[0].name }}.split(b"\x00", 1)[0].strip().decode("ascii", errors="ignore")
+        return cls({{ response_fields[0].name }})
+{%- elif string_fields|length == 0 %}
+        values = struct.unpack(cls._STRUCT_FORMAT, raw)
+        return cls(*values)
+{%- else %}
+        values = struct.unpack(cls._STRUCT_FORMAT, raw)
+        decoded = []
+        for value, field in zip(values, dataclasses.fields(cls)):
+            if field.type == str:
+                decoded.append(value.split(b"\x00", 1)[0].strip().decode("ascii", errors="ignore"))
+            else:
+                decoded.append(value)
+        return cls(*decoded)
+{%- endif %}
+{%- endif %}
+
+class {{ command_name }}(TelecommandInterface):
 
     def __init__(self):
-        self.name = "{{ telecommand_name }}"
-        {% if arguments %}
-        self.help = "{{ telecommand_name }}: input args= {%- for argument in arguments %} {{ argument['name'] }}({{ argument['type'] }}{% if argument['type'] == 'enum' %}: {%- for value in argument['values'] -%} {{ loop.index0 }}:{{ value }}{% if not loop.last %}, {% endif %}{%- endfor -%}{% endif %}){% if not loop.last %}, {% endif %}{% endfor %}"
-        self.help_input = "{%- for argument in arguments %} {{ argument['name'] }}=({{ argument['type'] }}{% if argument['type'] == 'enum' %}: {%- for value in argument['values'] -%} {{ loop.index0 }}:{{ value }}{% if not loop.last %}, {% endif %}{%- endfor -%}{% endif %}){% if not loop.last %}, {% endif %}{% endfor %}"
-        {% else %}
-        self.help = "{{ telecommand_name }}: No input arguments"
-        self.help_input = "None"
-        {% endif %}
+        self.name = "{{ command_name_snake }}"
         self.operation = {{ operation_id }}
-        self.area_version = 0
-        self.num_inputs = {{ num_inputs }}
-
-    def loadInputArguments(self, args):
-        {% if arguments %}
-        if not isinstance(args, (list, tuple)) or len(args) != {{ arguments|length }}:
-            raise ValueError("Expected {{ arguments|length }} arguments, but got {}".format(len(args)))
-
-        self.body = b""
-
-        {% for arg in arguments %}
-        arg_{{ loop.index0 }} = args[{{ loop.index0 }}]
-        {%- if arg['type'] == 'float' %}
-        arg_{{ loop.index0 }} = float(arg_{{ loop.index0 }})
-        self.body += struct.pack('f', arg_{{ loop.index0 }})
-        {%- elif arg['type'] == 'uint8_t' %}
-        self.body += int(arg_{{ loop.index0 }}).to_bytes(1, 'little')
-        {%- elif arg['type'] == 'uint16_t' %}
-        self.body += int(arg_{{ loop.index0 }}).to_bytes(2, 'little')
-        {%- elif arg['type'] == 'uint32_t' %}
-        self.body += int(arg_{{ loop.index0 }}).to_bytes(4, 'little')
-        {%- elif arg['type'] == 'enum' %}
-        arg_{{ loop.index0 }} = int(arg_{{ loop.index0 }})
-        if arg_{{ loop.index0 }} not in self.enum_map_{{ arg['name'] }}:
-            raise ValueError(f"Invalid input for {{ arg['name'] }}")
-        self.body += arg_{{ loop.index0 }}.to_bytes(max((arg_{{ loop.index0 }}.bit_length() + 7) // 8, 1), 'little')
-        {%- else %}
-        raise TypeError(f"Unsupported argument type '{{ arg['type'] }}' for argument '{{ arg['name'] }}'")
-        {%- endif %}
-        {% endfor %}
-
-        self.body_length = len(self.body)
-        {% else %}
-        # No arguments; nothing to process
         self.body = b""
         self.body_length = 0
-        {% endif %}
 
-
-    def parseOutputArguments(self, response):
-{%- if return_type %}
-        response_dict = {}
-    {%- if return_type == 'uint32_t' %}
-        response_int = int.from_bytes(response, 'little')
-        response_dict['int_value'] = hex(response_int)
-    {%- if return_name == 'timestamp' %}
-        timestamp = timedelta(milliseconds=response_int)
-        response_dict['Date'] = str(timestamp)
-    {% endif %}
-    {%- elif return_type == 'string' %}
-        response_dict['{{ return_name }}'] = response.decode('utf-8').strip()
-    {% endif %}
-        return response_dict
-{% else %}
-        print("No output arguments!")
+    @classmethod
+    def get_input_type(cls){% if has_input_args %} -> type[{{ command_name }}Args]{% else %} -> None{% endif %}:
+        {%- if has_input_args %}
+        return {{ command_name }}Args
+        {%- else %}
         return None
-{% endif %}
+        {%- endif %}
+
+    def load_input_arguments(self, args{% if has_input_args %}: {{ command_name }}Args{% else %}: None{% endif %}) -> None:
+        {%- if has_input_args %}
+        self.body = {{ command_name }}Args.pack(args)
+        self.body_length = {{ command_name }}Args.size()
+        {%- else %}
+        self.body = b""
+        self.body_length = 0
+        {%- endif %}
+
+    def parse_output_arguments(self, response: bytes){% if has_output_args %} -> {{ command_name }}Response{% else %} -> None{% endif %}:
+        {%- if has_output_args %}
+        return {{ command_name }}Response.unpack(response)
+        {%- else %}
+        return None
+        {%- endif %}
