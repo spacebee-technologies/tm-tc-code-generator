@@ -190,7 +190,7 @@ def generate_telecommand_class(template, telecommand, output_dir):
 
         # Enum type
         if arg_type == "enum":
-            py_type = arg["enumName"].capitalize()
+            py_type = upper_first_letter(arg["enumName"])
             struct_code = "B"
 
         # String or bytes (fixed-length)
@@ -206,7 +206,7 @@ def generate_telecommand_class(template, telecommand, output_dir):
         else:
             raise ValueError(f"Unsupported argument type: {arg_type}")
 
-        args.append({"name": arg["name"], "type": py_type})
+        args.append({"name": camel_to_snake(arg["name"]), "type": py_type})
         struct_parts.append(struct_code)
 
     has_input_args = len(args) > 0
@@ -231,7 +231,7 @@ def generate_telecommand_class(template, telecommand, output_dir):
         else:
             raise ValueError(f"Unsupported return type: {ret_type}")
 
-        response_fields = [{"name": ret["name"], "type": py_type}]
+        response_fields = [{"name": camel_to_snake(ret["name"]), "type": py_type}]
         response_struct_format = "<" + struct_code
 
     # Handle enums
@@ -239,7 +239,7 @@ def generate_telecommand_class(template, telecommand, output_dir):
     if any(a.get("type") == "enum" for a in command_spec.get("arguments", [])):
         enums = [
             {
-                "name": arg["enumName"].capitalize(),
+                "name": upper_first_letter(arg["enumName"]),
                 "entries": {v: i for i, v in enumerate(arg["values"])},
             }
             for arg in command_spec["arguments"]
