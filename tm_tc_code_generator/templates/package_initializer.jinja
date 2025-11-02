@@ -1,10 +1,10 @@
 {%- for command in commands %}
-from .{{ command }} import {{ command }}
+from .{{ command.file }} import {{ command.class }}
 {%- endfor %}
 
 def get_commands():
     return [
         {%- for command in commands %}
-        {{ command }}(),
+        {{ command.class }}(),
         {%- endfor %}
     ]

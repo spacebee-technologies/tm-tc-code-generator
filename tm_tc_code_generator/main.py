@@ -217,8 +217,9 @@ def generate_telecommand_class(template, telecommand, output_dir):
 
 def generate_package_initializer(env, telecommands, output_dir):
     package_initializer_template = env.get_template('package_initializer.jinja')
-    commands_snake = [camel_to_snake(command['name']) for command in telecommands]
-    output = package_initializer_template.render(commands=commands_snake)
+    commands = [{'file': camel_to_snake(command['name']), 'class': upper_first_letter(command['name'])}
+                for command in telecommands]
+    output = package_initializer_template.render(commands=commands)
     with open(output_dir / f'__init__.py', 'w') as file_handler:
         print(output, file=file_handler)
 
