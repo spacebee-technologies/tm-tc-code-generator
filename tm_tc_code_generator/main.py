@@ -21,13 +21,15 @@ def generate_telecommand_base_header(template, telecommand, output_dir):
     snake = camel_to_snake(telecommand['name'])
     uppercase_name = snake.upper()
     camel_case = upper_first_letter(telecommand['name'])
-    if 'return' in telecommand:
-        if telecommand['return']['type'] == 'string':
-            return_name = telecommand['return']['name']
-            string_length = telecommand['return']['stringLength']
-            returns = f'char {return_name}[{string_length}];'
-        else:
-            returns = telecommand['return']['type'] + ' ' + telecommand['return']['name'] + ';'
+    if 'returns' in telecommand:
+        returns = []
+        for return_item in telecommand['returns']:
+            if return_item['type'] == 'string':
+                return_name = return_item['name']
+                string_length = return_item['stringLength']
+                returns.append(f'char {return_name}[{string_length}];')
+            else:
+                returns.append(return_item['type'] + ' ' + return_item['name'] + ';')
     else:
         returns = None
     arguments = telecommand['arguments'] if 'arguments' in telecommand else None
