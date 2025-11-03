@@ -215,26 +215,38 @@ def generate_telecommand_class(template, telecommand, output_dir):
     struct_format = "<" + " ".join(struct_parts) if has_input_args else ""
 
     # Output arguments
-    has_output_args = "return" in command_spec and command_spec["return"] is not None
     response_fields = []
     response_struct_format = ""
+    has_output_args = False
 
-    if has_output_args:
-        ret = command_spec["return"]
-        ret_type = ret["type"]
-        struct_code = ""
+    # Normalize to a list
+    returns = command_spec.get("returns")
+    if returns is None and "return" in command_spec:
+        returns = [command_spec["return"]]
 
-        if ret_type == "string":
-            py_type = "str"
-            length = int(ret.get("stringLength", "1"))
-            struct_code = f"{length}s"
-        elif ret_type in type_map:
-            py_type, struct_code = type_map[ret_type]
-        else:
-            raise ValueError(f"Unsupported return type: {ret_type}")
+    if returns:
+        has_output_args = True
+        struct_parts_out = []
 
-        response_fields = [{"name": camel_to_snake(ret["name"]), "type": py_type}]
-        response_struct_format = "<" + struct_code
+        for ret in returns:
+            ret_type = ret["type"]
+            struct_code = ""
+
+            if ret_type == "string":
+                py_type = "str"
+                length = int(ret.get("stringLength", "1"))
+                struct_code = f"{length}s"
+            elif ret_type in type_map:
+                py_type, struct_code = type_map[ret_type]
+            else:
+                raise ValueError(f"Unsupported return type: {ret_type}")
+
+            response_fields.append(
+                {"name": camel_to_snake(ret["name"]), "type": py_type}
+            )
+            struct_parts_out.append(struct_code)
+
+        response_struct_format = "<" + " ".join(struct_parts_out)
 
     # Handle enums
     enums = []
@@ -248,6 +260,7 @@ def generate_telecommand_class(template, telecommand, output_dir):
             if arg["type"] == "enum"
         ]
 
+    # Template context
     data = {
         "command_name": name[0].upper() + name[1:],
         "command_name_snake": snake_name,
