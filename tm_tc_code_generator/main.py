@@ -28,6 +28,10 @@ def generate_telecommand_base_header(template, telecommand, output_dir):
                 return_name = return_item['name']
                 string_length = return_item['stringLength']
                 returns.append(f'char {return_name}[{string_length}];')
+            elif return_item['type'] == 'bytes':
+                return_name = return_item['name']
+                string_length = return_item['length']
+                returns.append(f'uint8_t {return_name}[{string_length}];')
             else:
                 returns.append(return_item['type'] + ' ' + return_item['name'] + ';')
     else:
@@ -43,6 +47,9 @@ def generate_telecommand_base_header(template, telecommand, output_dir):
                     values.append(uppercase_name + '_' + camel_to_snake(enum_name).upper() + '_' + value)
                 enums[enum_name] =  values
                 argument['type'] = f'{camel_case}{enum_name}_t'
+            elif argument['type'] == 'bytes':
+                argument['type'] = 'uint8_t'
+                argument['name'] = f'{argument['name']}[{argument['length']}]'
     output = template.render(uppercase_name=uppercase_name,
                              camel_case=camel_case,
                              returns=returns,
@@ -195,11 +202,17 @@ def generate_telecommand_class(template, telecommand, output_dir):
             py_type = upper_first_letter(arg["enumName"])
             struct_code = "B"
 
-        # String or bytes (fixed-length)
+        # String (fixed-length)
         elif arg_type == "string":
             py_type = "str"
             length = int(arg.get("stringLength", "1"))
             struct_code = f"{length}s"
+
+        # Bytes (fixed-length)
+        elif arg_type == "bytes":
+            py_type = "bytes"
+            length = int(arg.get("length", "1"))
+            struct_code = f"{length}p"
 
         # Normal numeric types
         elif arg_type in type_map:
@@ -236,6 +249,10 @@ def generate_telecommand_class(template, telecommand, output_dir):
                 py_type = "str"
                 length = int(ret.get("stringLength", "1"))
                 struct_code = f"{length}s"
+            elif ret_type == "bytes":
+                py_type = "bytes"
+                length = int(ret.get("length", "1"))
+                struct_code = f"{length}p"
             elif ret_type in type_map:
                 py_type, struct_code = type_map[ret_type]
             else:
