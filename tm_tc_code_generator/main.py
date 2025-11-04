@@ -49,7 +49,7 @@ def generate_telecommand_base_header(template, telecommand, output_dir):
                 argument['type'] = f'{camel_case}{enum_name}_t'
             elif argument['type'] == 'bytes':
                 argument['type'] = 'uint8_t'
-                argument['name'] = f'{argument['name']}[{argument['length']}]'
+                argument['name'] = f"{argument['name']}[{argument['length']}]"
     output = template.render(uppercase_name=uppercase_name,
                              camel_case=camel_case,
                              returns=returns,
