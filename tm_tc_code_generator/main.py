@@ -202,11 +202,17 @@ def generate_telecommand_class(template, telecommand, output_dir):
             py_type = upper_first_letter(arg["enumName"])
             struct_code = "B"
 
-        # String or bytes (fixed-length)
+        # String (fixed-length)
         elif arg_type == "string":
             py_type = "str"
             length = int(arg.get("stringLength", "1"))
             struct_code = f"{length}s"
+
+        # Bytes (fixed-length)
+        elif arg_type == "bytes":
+            py_type = "bytes"
+            length = int(arg.get("length", "1"))
+            struct_code = f"{length}p"
 
         # Normal numeric types
         elif arg_type in type_map:
@@ -243,6 +249,10 @@ def generate_telecommand_class(template, telecommand, output_dir):
                 py_type = "str"
                 length = int(ret.get("stringLength", "1"))
                 struct_code = f"{length}s"
+            elif ret_type == "bytes":
+                py_type = "bytes"
+                length = int(ret.get("length", "1"))
+                struct_code = f"{length}p"
             elif ret_type in type_map:
                 py_type, struct_code = type_map[ret_type]
             else:
